@@ -1,29 +1,25 @@
+import argparse
 import os
 import json
 import glob
 from dotenv import load_dotenv
 from src.database import init_db, save_game_stats, save_timeline_events
 from src.parsing import parse_match_to_stats, parse_timeline_to_events
+from src.riot import RiotClient
 
 load_dotenv()
 
 DATA_DIR = os.path.join(os.getcwd(), "data")
 
-def get_puuid_from_match_file(match_data: dict) -> str:
-    # We need to know WHICH participant is the user to extract stats.
-    # In a real app we'd pass the PUUID in.
-    # For now, let's assume valid PUUID is in env or derived.
-    # Actually, we should probably pass PUUID as arg to the script.
-    # BUT, to make it easy, let's just grab the PUUID from the .env if available
-    return os.getenv("RIOT_PUUID")
-
-def process_data():
+def process_data(target_puuid: str = None):
     print("Initializing Database...")
     init_db()
     
-    puuid = os.getenv("RIOT_PUUID")
+    # Try to find PUUID from args or env
+    puuid = target_puuid or os.getenv("RIOT_PUUID")
+
     if not puuid:
-        print("Error: RIOT_PUUID not found in environment.")
+        print("Error: No PUUID provided. Use --user, --puuid, or set RIOT_PUUID env var.")
         return
 
     print(f"Processing data for PUUID: {puuid}")
@@ -38,11 +34,19 @@ def process_data():
                 match_data = json.load(f)
             
             match_id = match_data["metadata"]["matchId"]
+            # Optimization: check if stats already exist? For now, overwrite/ignore is handled by DB logic (replace)
+            
+            # Additional check: Is this user in the match?
+            # parse_match_to_stats raises error if not.
+            
             print(f"Parsing Match: {match_id}...", end="")
             
-            stats = parse_match_to_stats(match_data, puuid)
-            save_game_stats(stats)
-            print(" Done.")
+            try:
+                stats = parse_match_to_stats(match_data, puuid)
+                save_game_stats(stats)
+                print(" Done.")
+            except ValueError:
+                print(" Skipped (User not in match).")
             
         except Exception as e:
             print(f" Failed: {e}")
@@ -67,4 +71,24 @@ def process_data():
             print(f" Failed: {e}")
 
 if __name__ == "__main__":
-    process_data()
+    parser = argparse.ArgumentParser(description="Process raw JSON files into Database")
+    parser.add_argument("--user", help="Riot ID (GameName#TagLine) to resolve PUUID")
+    parser.add_argument("--puuid", help="Direct PUUID")
+    args = parser.parse_args()
+
+    resolved_puuid = args.puuid
+    
+    if args.user and not resolved_puuid:
+        if "#" not in args.user:
+            print("Error: User must be in format GameName#TagLine")
+        else:
+            name, tag = args.user.split("#")
+            print(f"Resolving PUUID for {args.user}...")
+            try:
+                client = RiotClient()
+                account = client.get_account_by_riot_id(name, tag)
+                resolved_puuid = account["puuid"]
+            except Exception as e:
+                print(f"Error resolving user: {e}")
+    
+    process_data(resolved_puuid)

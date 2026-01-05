@@ -21,9 +21,10 @@ Building an AI-assisted coaching app using Riot's API.
     - Decide on Database vs continuing with File persistence (SQLite likely).
 
 ## Phase 2: Analysis Engine
-- [ ] **Step 4: Rule-Based Analysis**
+- [x] **Step 4: Rule-Based Analysis**
     - Implement non-AI logic: "CS per minute", "Objective participation".
-    - Compare user stats vs "Average" (requires fetching Challenger data?).
+    - Compare user stats vs "Average" (Gold/Plat baselines implemented).
+    - CLI tool `analyze.py` created for reporting.
 
 - [ ] **Step 5: LLM Context Integration**
     - Generate text summaries of a match.

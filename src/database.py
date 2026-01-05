@@ -114,3 +114,43 @@ def save_timeline_events(events: List[TimelineEventDto]):
     
     conn.commit()
     conn.close()
+
+def get_recent_games(puuid: str, limit: int = 20) -> List[GameStatsDto]:
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    c.execute('''
+        SELECT * FROM game_stats 
+        WHERE puuid = ? 
+        ORDER BY game_creation DESC 
+        LIMIT ?
+    ''', (puuid, limit))
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    return [
+        GameStatsDto(
+            match_id=row['match_id'],
+            puuid=row['puuid'],
+            champion_name=row['champion_name'],
+            win=bool(row['win']),
+            game_creation=row['game_creation'],
+            game_duration=row['game_duration'],
+            kills=row['kills'],
+            deaths=row['deaths'],
+            assists=row['assists'],
+            kda=row['kda'],
+            total_minions_killed=row['total_minions_killed'],
+            neutral_minions_killed=row['neutral_minions_killed'],
+            cs_per_minute=row['cs_per_minute'],
+            gold_earned=row['gold_earned'],
+            gold_per_minute=row['gold_per_minute'],
+            total_damage_dealt_to_champions=row['total_damage_dealt_to_champions'],
+            damage_per_minute=row['damage_per_minute'],
+            vision_score=row['vision_score'],
+            wards_placed=row['wards_placed'],
+            wards_killed=row['wards_killed'],
+            team_position=row['team_position']
+        ) for row in rows
+    ]

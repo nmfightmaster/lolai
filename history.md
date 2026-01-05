@@ -42,3 +42,16 @@ This file logs key architectural decisions and completed milestones. Use this to
 - `lolai.db` contains parsed stats and events.
 - Unit tests cover parsing and DB operations.
 
+## 2026-01-05: Step 4 - Rule-Based Analysis
+**Context**: Implement basic aggregation and comparison logic for player stats.
+**Changes**:
+- **Logic**: Created `src/analysis.py` with `AnalysisEngine` class.
+- **DB**: Added `get_recent_games` to `src/database.py`.
+- **CLI**: Added `analyze.py` to run reports via CLI. Support for `GameName#Tag` and direct `PUUID`.
+- **Testing**: Added `tests/test_analysis.py` for calculation verification.
+
+**Current State**:
+- Can analyze last N games for a user.
+- Reports Win Rate, KDA, CSPM, Vision Score, and Gold/Min.
+- Compares against static baseline (Gold/Plat average).
+

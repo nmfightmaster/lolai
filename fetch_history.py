@@ -4,6 +4,8 @@ import time
 from typing import List
 from src.riot import RiotClient
 from src.storage import save_match_data, save_timeline_data
+from src.database import init_db, save_game_stats, save_timeline_events
+from src.parsing import parse_match_to_stats, parse_timeline_to_events
 
 def get_puuid_from_env() -> str:
     # In a real app we might fetch this from Summoner Name if not in env
@@ -16,9 +18,9 @@ def get_puuid_from_env() -> str:
 def file_exists(filename: str) -> bool:
     return os.path.exists(os.path.join(os.getcwd(), "data", filename))
 
-def fetch_history(count: int = 20):
+def fetch_history(puuid: str, count: int = 20):
+    init_db()
     client = RiotClient()
-    puuid = get_puuid_from_env()
     print(f"Fetching last {count} matches for PUUID: {puuid}...")
 
     matches_fetched = 0
@@ -51,17 +53,30 @@ def fetch_history(count: int = 20):
                 match_data = client.get_match(match_id)
                 save_match_data(match_id, match_data)
 
+                # Parse & Save Match Stats
+                try:
+                    stats = parse_match_to_stats(match_data, puuid)
+                    save_game_stats(stats)
+                except ValueError as ve:
+                     print(f"   -> Info: {ve} (User likely not in this match)")
+                except Exception as pe:
+                     print(f"   -> Warning: Failed to parse stats: {pe}")
+
                 # Fetch Timeline
                 timeline_data = client.get_match_timeline(match_id)
                 save_timeline_data(match_id, timeline_data)
                 
-                print(f"   -> Saved.")
-            except Exception as e:
-                print(f"   -> Error fetching {match_id}: {e}")
+                # Parse & Save Events
+                try:
+                    events = parse_timeline_to_events(timeline_data, puuid)
+                    save_timeline_events(events)
+                except Exception as pe:
+                    print(f"   -> Warning: Failed to parse events: {pe}")
                 
-            # Respect rate limits between calls if needed, though requests are sequential and client handles 429s.
-            # A small sleep might be nice to be polite if we are aggressive, but client handles headers.
-            
+                print(f"   -> Saved & Processed.")
+            except Exception as e:
+                print(f"   -> Error fetching/processing {match_id}: {e}")
+                
             matches_fetched += 1
             if matches_fetched >= count:
                 break
@@ -77,9 +92,27 @@ def fetch_history(count: int = 20):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch League of Legends match history.")
     parser.add_argument("--count", type=int, default=20, help="Number of matches to fetch")
+    parser.add_argument("--user", help="Riot ID (GameName#TagLine)")
+    parser.add_argument("--puuid", help="Direct PUUID")
     args = parser.parse_args()
 
+    client = RiotClient()
+    target_puuid = None
+
     try:
-        fetch_history(count=args.count)
+        if args.puuid:
+            target_puuid = args.puuid
+        elif args.user:
+            if "#" not in args.user:
+                raise ValueError("User must be in format GameName#TagLine")
+            name, tag = args.user.split("#")
+            print(f"Resolving PUUID for {args.user}...")
+            account = client.get_account_by_riot_id(name, tag)
+            target_puuid = account["puuid"]
+        else:
+            # Fallback to env
+            target_puuid = get_puuid_from_env()
+
+        fetch_history(puuid=target_puuid, count=args.count)
     except Exception as e:
         print(f"Error: {e}")

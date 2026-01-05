@@ -1,5 +1,6 @@
+import time
 import httpx
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from src.config import get_riot_api_key
 
 class RiotClient:
@@ -16,14 +17,23 @@ class RiotClient:
             "X-Riot-Token": self.api_key
         }
 
-    def _get(self, url: str) -> Dict[str, Any]:
+    def _get(self, url: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Internal method to make GET requests.
+        Handles 429 Rate Limited responses by sleeping.
         """
-        with httpx.Client(headers=self.headers) as client:
-            response = client.get(url)
-            response.raise_for_status()
-            return response.json()
+        while True:
+            with httpx.Client(headers=self.headers) as client:
+                response = client.get(url, params=params)
+                
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get("Retry-After", 1))
+                    print(f"Rate limited. Sleeping for {retry_after} seconds...")
+                    time.sleep(retry_after)
+                    continue
+                
+                response.raise_for_status()
+                return response.json()
 
     def get_account_by_riot_id(self, game_name: str, tag_line: str) -> Dict[str, Any]:
         """
@@ -32,6 +42,31 @@ class RiotClient:
         """
         url = f"{self.base_url_region}/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
         return self._get(url)
+
+    def get_match_ids_by_puuid(
+        self, 
+        puuid: str, 
+        start: int = 0, 
+        count: int = 20, 
+        queue: Optional[int] = None, 
+        type: Optional[str] = None
+    ) -> List[str]:
+        """
+        Get a list of match IDs by PUUID.
+        Endpoint: /lol/match/v5/matches/by-puuid/{puuid}/ids
+        """
+        url = f"{self.base_url_region}/lol/match/v5/matches/by-puuid/{puuid}/ids"
+        params = {
+            "start": start,
+            "count": count
+        }
+        if queue:
+            params["queue"] = queue
+        if type:
+            params["type"] = type
+            
+        # The API returns a list of strings, not a dict
+        return self._get(url, params=params)
 
     def get_match(self, match_id: str) -> Dict[str, Any]:
         """

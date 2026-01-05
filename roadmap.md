@@ -10,12 +10,12 @@ Building an AI-assisted coaching app using Riot's API.
     - Setup minimal CI and testing.
     - Validated connectivity with Smoke Test.
 
-- [ ] **Step 2: Data Acquisition (Match History)**
+- [x] **Step 2: Data Acquisition (Match History)**
     - Implement `get_match_history(puuid)` with pagination.
     - Bulk fetch logic (rate limit handling).
     - CLI tool to "fetch last N matches for User X".
 
-- [ ] **Step 3: Data Parsing & Storage**
+- [x] **Step 3: Data Parsing & Storage**
     - Define domain models for "Game Stats" (simpler than raw Riot JSON).
     - Parse raw Timeline data into events (Kills, Objectives, Gold diffs).
     - Decide on Database vs continuing with File persistence (SQLite likely).

@@ -14,3 +14,4 @@ data/*
 # IDE
 .vscode/
 .idea/
+lolai.db

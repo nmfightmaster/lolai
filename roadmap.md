@@ -26,10 +26,10 @@ Building an AI-assisted coaching app using Riot's API.
     - Compare user stats vs "Average" (Gold/Plat baselines implemented).
     - CLI tool `analyze.py` created for reporting.
 
-- [ ] **Step 5: LLM Context Integration**
+- [x] **Step 5: LLM Context Integration**
     - Generate text summaries of a match.
     - Create prompt templates: "Given this timeline, why did I lose?"
-    - Connect to OpenAI/Gemini API.
+    - Connect to Gemini API (using `google-genai`).
 
 ## Phase 3: Productization
 - [ ] **Step 6: User Interface**

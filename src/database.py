@@ -154,3 +154,32 @@ def get_recent_games(puuid: str, limit: int = 20) -> List[GameStatsDto]:
             team_position=row['team_position']
         ) for row in rows
     ]
+
+def get_timeline_events(match_id: str, puuid: str) -> List[TimelineEventDto]:
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    c.execute('''
+        SELECT * FROM timeline_events 
+        WHERE match_id = ? AND puuid = ?
+        ORDER BY timestamp ASC
+    ''', (match_id, puuid))
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    return [
+        TimelineEventDto(
+            match_id=row['match_id'],
+            puuid=row['puuid'],
+            timestamp=row['timestamp'],
+            type=row['type'],
+            killer_id=row['killer_id'],
+            victim_id=row['victim_id'],
+            position_x=row['position_x'],
+            position_y=row['position_y'],
+            item_id=row['item_id'],
+            monster_type=row['monster_type'],
+            lane_type=row['lane_type']
+        ) for row in rows
+    ]

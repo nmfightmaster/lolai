@@ -55,3 +55,15 @@ This file logs key architectural decisions and completed milestones. Use this to
 - Reports Win Rate, KDA, CSPM, Vision Score, and Gold/Min.
 - Compares against static baseline (Gold/Plat average).
 
+## 2026-01-05: Step 5 - LLM Context Integration
+**Context**: Add qualitative analysis using Generative AI.
+**Changes**:
+- **Stack**: Integrated `google-genai`. Migrated from deprecated `google-generativeai`.
+- **Logic**: Created `src/llm.py` to wrap Gemini API calls.
+- **CLI**: Added `--ai` flag to `analyze.py`.
+- **Testing**: Added `tests/test_llm.py` with mocked responses.
+
+**Current State**:
+- `analyze.py --ai` fetches the most recent match, constructs a prompt with stats/timeline, and prints a 3-sentence coaching summary.
+- Uses `gemini-2.0-flash` model.
+

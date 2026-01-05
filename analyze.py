@@ -2,12 +2,15 @@ import argparse
 import sys
 from src.riot import RiotClient
 from src.analysis import AnalysisEngine
+from src.database import get_recent_games, get_timeline_events
+from src.llm import LLMClient
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze League of Legends performance")
     parser.add_argument("--user", help="Riot ID (GameName#TagLine)")
     parser.add_argument("--puuid", help="Direct PUUID to analyze")
     parser.add_argument("--limit", type=int, default=20, help="Number of games to analyze")
+    parser.add_argument("--ai", action="store_true", help="Generate AI summary for the most recent match")
     args = parser.parse_args()
 
     if not args.user and not args.puuid:
@@ -42,7 +45,7 @@ def main():
         sys.exit(0)
         
     print("\n" + "="*40)
-    print(f"ANALYSIS REPORT: {args.user}")
+    print(f"ANALYSIS REPORT: {args.user or puuid}")
     print("="*40)
     print(f"Games Analyzed: {report.games_analyzed}")
     print(f"Win Rate:       {report.win_rate:.1f}%")
@@ -52,6 +55,20 @@ def main():
     print(f"Vision Score:   {report.avg_vision_score} ({report.vision_diff})")
     print(f"Gold/Min:       {report.avg_gold_per_min}")
     print("="*40)
+
+    if args.ai:
+        print("\nNote: Generating AI summary for the MOST RECENT match only...")
+        games = get_recent_games(puuid, 1)
+        if games:
+            game = games[0]
+            try:
+                events = get_timeline_events(game.match_id, puuid)
+                client = LLMClient()
+                summary = client.generate_match_summary(game, events)
+                print("\n[AI COACH SUMMARY]")
+                print(summary)
+            except Exception as e:
+                print(f"Error generating AI summary: {e}")
 
 if __name__ == "__main__":
     main()
